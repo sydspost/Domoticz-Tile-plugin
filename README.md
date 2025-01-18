@@ -25,4 +25,5 @@ Requirements
 
 Installation
 - pip3 install -u googlemaps
-- git clone 
+- cd ~/domoticz/plugins/
+- git clone https://github.com/sydspost/Domoticz---Tile-plugin.git
