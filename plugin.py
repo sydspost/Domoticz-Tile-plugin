@@ -24,6 +24,7 @@
         <ul style="list-style-type:square">
             <li>Create a Tile account on www.tile.com, remember your emailadres en password, and fill in below</li>
             <li>Generate a Google maps API key, and fill in below</li><br/>
+        </ul>
     </description>
     <params>
         <param field="Username" label="Username" width="200px" required="true"/>
