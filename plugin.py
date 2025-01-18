@@ -7,7 +7,7 @@
 # Date   : 13-1-2025
 #
 """
-<plugin key="Tile" name="Tile" author="Syds Post" version="1.0.0" wikilink="http://www.domoticz.com/wiki/plugins/plugin.html" externallink="https://www.tile.com/">
+<plugin key="Tile" name="Tile" author="Syds Post" version="1.0.0" wikilink="http://https://www.sydspost.nl/index.php/2025/01/18/domoticz-plugin-for-tile-trackers/" externallink="https://www.tile.com/">
     <description>
         <h2>Tile</h2><br/>
         This plugin collects the distance from your home to your Tile devices<br/>
@@ -21,7 +21,9 @@
             <li>All Tile trackers should be supported</li>
         </ul>
         <h3>Configuration</h3>
-        Create a Tile account on www.tile.com, remember your emailadres en password, and fill in below<br/>
+        <ul style="list-style-type:square">
+            <li>Create a Tile account on www.tile.com, remember your emailadres en password, and fill in below</li>
+            <li>Generate a Google maps API key, and fill in below</li><br/>
     </description>
     <params>
         <param field="Username" label="Username" width="200px" required="true"/>
