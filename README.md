@@ -13,6 +13,16 @@ Devices
 
 Configuration
 - Create a Tile account on www.tile.com, remember your emailadres en password, and fill in plugin settins
-- Generate a Google maps API key, and fill in plugin settings
+- Generate a Google maps API key, and fill in plugin settings.
 
 Read the complete story on https://www.sydspost.nl/index.php/2025/01/18/domoticz-plugin-for-tile-trackers/
+
+Requirements
+- python 3.12.3 or later
+- googlemaps library
+- Tile account
+- Google maps API key
+
+Installation
+- pip3 install -u googlemaps
+- git clone 
