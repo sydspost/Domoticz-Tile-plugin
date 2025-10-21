@@ -13,29 +13,20 @@ Devices
 
 Configuration
 - Create a Tile account on www.tile.com, remember your emailadres en password, and fill in plugin settins
-- Generate a Google maps API key, and fill in plugin settings.
 
 Read the complete story on https://www.sydspost.nl/index.php/2025/01/18/domoticz-plugin-for-tile-trackers/
 
 Requirements
 - python 3.12.3 or later
-- googlemaps library (https://github.com/googlemaps/google-maps-services-python)
+- haversine library (https://pypi.org/project/haversine/)
 - Tile account
-- Google maps API key
 
 Installation
-- pip3 install -u googlemaps
+- pip3 install -u haversine
 - cd ~/domoticz/plugins/
 - git clone https://github.com/sydspost/Domoticz-Tile-plugin.git
 - mv Domoticz-Tile-plugin tile
 - chmod +x ./tile/plugin.py
   
-API Key
-Each Google Maps Web Service request requires an API key or client ID. API keys are generated in the 'Credentials' page of the 'APIs & Services' tab of Google Cloud console.
-
-For even more information on getting started with Google Maps Platform and generating/restricting an API key, see Get Started with Google Maps Platform in the docs https://googlemaps.github.io/google-maps-services-python/docs/index.html.
-
-Important: This key should be kept secret on your server.
-
 Tile account
 Create your Tile account on www.tile.com
