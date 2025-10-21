@@ -124,8 +124,8 @@ class BasePlugin:
     
             # Login to Tile API
             self.endpoint = self.endpoint + '/sessions'
-            data = { 'email': 'sydspost@gmail.com', \
-                     'password': 'X!do2019' }
+            data = { 'email': Parameters["Username"], \
+                     'password': Parameters["Password"] }
     
             data = urllib.parse.urlencode(data).encode("utf-8")
     
