@@ -1,13 +1,13 @@
-#!/usr/bin/python3 
+#!/usr/bin/python3
 #
-# Tile 
+# Tile
 #
 # Author : Syds Post
-# Version: 1.0.0
-# Date   : 13-1-2025
+# Version: 1.1.0
+# Date   : 21-10-2025
 #
 """
-<plugin key="Tile" name="Tile" author="Syds Post" version="1.0.0" wikilink="http://https://www.sydspost.nl/index.php/2025/01/18/domoticz-plugin-for-tile-trackers/" externallink="https://www.tile.com/">
+<plugin key="Tile" name="Tile" author="Syds Post" version="1.1.0" wikilink="http://https://www.sydspost.nl/index.php/2025/01/18/domoticz-plugin-for-tile-trackers/" externallink="https://www.tile.com/">
     <description>
         <h2>Tile</h2><br/>
         This plugin collects the distance from your home to your Tile devices<br/>
@@ -23,13 +23,11 @@
         <h3>Configuration</h3>
         <ul style="list-style-type:square">
             <li>Create a Tile account on www.tile.com, remember your emailadres en password, and fill in below</li>
-            <li>Generate a Google maps API key, and fill in below</li><br/>
         </ul>
     </description>
     <params>
         <param field="Username" label="Username" width="200px" required="true"/>
         <param field="Password" label="Password" width="200px" required="true"/>
-        <param field="Mode1" label="API key" width="350px" required="true"/>
         <param field="Mode6" label="Debug" width="150px">
             <options>
                 <option label="None" value="0" default="true" />
@@ -46,7 +44,7 @@
 </plugin>
 """
 import Domoticz as Domoticz
-import googlemaps
+from haversine import haversine, Unit
 import time
 import threading
 import urllib.request
@@ -62,7 +60,6 @@ class BasePlugin:
     endpoint=None           # Tile API's endpoint
     headers={}              # Tile API's headers
     cookie=None             # Tile API's cookie
-    gmaps=None              # gmaps connection
     runCounter=0            # # times heartbeat executed
     maxRuns=3               # initial max time handlethread is executed
 
@@ -80,8 +77,8 @@ class BasePlugin:
             Domoticz.Debugging(int(Parameters["Mode6"]))
             Domoticz.Log("Debugger started, use 'telnet 0.0.0.0 4444' to connect")
             # DumpConfigToLog()
-        
-        # Set initial heartbeat 
+
+        # Set initial heartbeat
         Domoticz.Heartbeat(6)
 
         # Create icons if not existing
@@ -90,7 +87,7 @@ class BasePlugin:
                 Domoticz.Image(Filename='images.zip').Create()
             except:
                 Domoticz.Log('Could not upload icons, images.zip not found in plugin file folder')
-        
+
         # get home location out of Domoticz settings
         if not "Location" in Settings:
             Domoticz.Log("Location nog set in Preferences")
@@ -99,12 +96,6 @@ class BasePlugin:
             homeLocation = Settings["Location"].split(";")
             self.homeLocation = (float(homeLocation[0]), float(homeLocation[1]))
             Domoticz.Log("Home location :" + str(self.homeLocation))
-
-        # initialize googlemaps API
-        try:
-            self.gmaps = googlemaps.Client(key=Parameters["Mode1"])
-        except:
-            Domoticz.Log('Error: Google maps not accessable')
 
         # Find devices that already exist, create those that don't
         # Getting Tiles
@@ -116,60 +107,64 @@ class BasePlugin:
                      'app_version': '2.89.1.4774', \
                      'locale': 'en_US' }
             data = urllib.parse.urlencode(data).encode("utf-8")
-    
+
             req = urllib.request.Request(url=self.url+self.endpoint, headers=self.headers, method='PUT')
-    
+
             with urllib.request.urlopen(req, data=data) as f:
                 response = f.read()
-    
+
             # Login to Tile API
             self.endpoint = self.endpoint + '/sessions'
             data = { 'email': Parameters["Username"], \
                      'password': Parameters["Password"] }
-    
+
             data = urllib.parse.urlencode(data).encode("utf-8")
-    
+
             req = urllib.request.Request(url=self.url+self.endpoint, headers=self.headers, method='POST')
-    
+
             with urllib.request.urlopen(req, data=data) as f:
                 response = f.read()
                 self.cookie = f.info().get_all('Set-Cookie')[0]
-    
+
             # Get Tiles
             self.endpoint = '/api/v1/tiles/tile_states'
             self.headers['Cookie']=self.cookie
-    
+
             req = urllib.request.Request(url=self.url+self.endpoint, headers=self.headers, method='GET')
-    
+
             with urllib.request.urlopen(req) as f:
                 response = json.loads(f.read().decode(encoding="utf-8").replace("'",'"'))
-    
+
             # Get Tile details, update Devices or create Devices if not exists yet
             for tile in response["result"]:
                 self.endpoint = '/api/v1/tiles/' + tile["tile_id"]
-    
+
                 req = urllib.request.Request(url=self.url+self.endpoint, headers=self.headers, method='GET')
-    
+
                 with urllib.request.urlopen(req) as f:
                     response = json.loads(f.read().decode(encoding="utf-8").replace("'",'"'))
                     tileLocation=(response["result"]["last_tile_state"]["latitude"], response["result"]["last_tile_state"]["longitude"])
-                    Domoticz.Log('Tilelocation '+str(tileLocation))
-    
+                    deviceName=response["result"]["name"]
+                    Domoticz.Log('Tilelocation '+deviceName+': '+str(tileLocation))
+
                     deviceFound = False
                     for Device in Devices:
-                        if ((response["result"]["name"] == Devices[Device].DeviceID)):
+                        if ((deviceName == Devices[Device].DeviceID)):
                             Devices[Device].Update(nValue=self.distance(tileLocation), sValue=str(self.distance(tileLocation)), TimedOut=False)
                             deviceFound = True
                             Domoticz.Debug("onStart:Tile '"+response["result"]["name"]+"', device updated.")
                             Domoticz.Log("onStart:Tile '"+response["result"]["name"]+"', device updated.")
-    
+
                     if deviceFound == False:
                         Domoticz.Device(Name=response["result"]["name"], DeviceID=response["result"]["name"], TypeName="Distance", Unit=len(Devices)+1, Type=243, Subtype=27, Switchtype=0, Image=Images["Tile"].ID, Used=1).Create()
+                        for Device in Devices:
+                            if ((deviceName == Devices[Device].DeviceID)):
+                                Devices[Device].Update(nValue=self.distance(tileLocation), sValue=str(self.distance(tileLocation)), TimedOut=False)
                         Domoticz.Debug("Tile '"+response["result"]["name"]+"', device was not found, created.")
                         Domoticz.Log("Tile '"+response["result"]["name"]+"', device was not found, created.")
         except:
-            Domoticz.Log('Error: Tiles API not accessable')
- 
+            Domoticz.Log('Error: Tiles API not accessable or tile not active')
+
         # Create/Start update thread
         self.updateThread = threading.Thread(name="TileUpdateThread", target=BasePlugin.handleThread, args=(self,))
         self.updateThread.start()
@@ -213,53 +208,57 @@ class BasePlugin:
 
         try:
             Domoticz.Debug("in handlethread")
-            
+
             # Get Tiles
             self.endpoint = '/api/v1/tiles/tile_states'
-    
+
             req = urllib.request.Request(url=self.url+self.endpoint, headers=self.headers, method='GET')
-    
+
             with urllib.request.urlopen(req) as f:
                 response = json.loads(f.read().decode(encoding="utf-8").replace("'",'"'))
-    
-    
+
+
             # Update or create Tile devices
             for tile in response["result"]:
                 self.endpoint = '/api/v1/tiles/' + tile["tile_id"]
-    
+
                 req = urllib.request.Request(url=self.url+self.endpoint, headers=self.headers, method='GET')
-    
+
                 with urllib.request.urlopen(req) as f:
                     response = json.loads(f.read().decode(encoding="utf-8").replace("'",'"'))
                     tileLocation=(response["result"]["last_tile_state"]["latitude"], response["result"]["last_tile_state"]["longitude"])
-                    Domoticz.Log('Tilelocation '+str(tileLocation))
-    
+                    deviceName=response["result"]["name"]
+                    Domoticz.Log('Tilelocation '+deviceName+': '+str(tileLocation))
+
                     deviceFound = False
                     for Device in Devices:
-                        if ((response["result"]["name"] == Devices[Device].DeviceID)):
+                        if ((deviceName == Devices[Device].DeviceID)):
                             distance=self.distance(tileLocation)
                             Devices[Device].Update(nValue=distance, sValue=str(distance), TimedOut=False)
                             leastDistance.append(distance)
                             deviceFound = True
                             Domoticz.Debug("Handlethread:Tile '"+response["result"]["name"]+"', device updated.")
                             Domoticz.Log("Handlethread:Tile '"+response["result"]["name"]+"', device updated.")
-    
+
                     if deviceFound == False:
                         Domoticz.Device(Name=response["result"]["name"], DeviceID=response["result"]["name"], TypeName="Distance", Unit=len(Devices)+1, Type=243, Subtype=27, Switchtype=0, Image=Images["Tile"].ID, Used=1).Create()
+                        for Device in Devices:
+                            if ((deviceName == Devices[Device].DeviceID)):
+                                Devices[Device].Update(nValue=self.distance(tileLocation), sValue=str(self.distance(tileLocation)), TimedOut=False)
                         Domoticz.Debug("Tile '"+response["result"]["name"]+"', device was not found, created.")
                         leastDistance.append(self.distance(tileLocation))
 
         except Exception as err:
-            Domoticz.Log('Error: Tile API not accessable')
+            Domoticz.Log('Error: Tile API not accessable or tile not active')
             Domoticz.Error("handleThread: "+str(err)+' line '+format(sys.exc_info()[-1].tb_lineno))
-        
+
         self.distanceInterval(min(leastDistance))
 
-    
-    def distance(self, tileLocation):
-       distanceMatrix = self.gmaps.distance_matrix(origins=tileLocation, destinations=self.homeLocation, mode="driving", units="metric")
 
-       return int(distanceMatrix["rows"][0]["elements"][0]["distance"]["value"])*100
+    def distance(self, tileLocation):
+       distanceMatrix = haversine(tileLocation, self.homeLocation, unit=Unit.METERS)
+
+       return int(distanceMatrix)
 
     def distanceInterval(self, distance):
         if distance > 10000 and distance < 100000:
@@ -269,7 +268,7 @@ class BasePlugin:
         elif distance > 500000 and distance < 1000000:
             self.maxRuns = 60
         else:
-            self.maxRuns = 600
+            self.maxRuns = 150
         Domoticz.Log('maxRuns p/heartbeat set to: '+self.maxRuns)
 
 global _plugin
