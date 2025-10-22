@@ -258,7 +258,7 @@ class BasePlugin:
     def distance(self, tileLocation):
        distanceMatrix = haversine(tileLocation, self.homeLocation, unit=Unit.METERS)
 
-       return int(distanceMatrix)
+       return int(distanceMatrix*100)
 
     def distanceInterval(self, distance):
         if distance > 10000 and distance < 100000:
